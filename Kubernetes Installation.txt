@@ -1,4 +1,4 @@
-ssh -i aea.pem ubuntu@
+ssh -i key.pem ubuntu@
 
 Kubernetes:
 	Master
