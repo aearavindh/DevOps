@@ -1,0 +1,50 @@
+ssh -i aea.pem ubuntu@
+
+Kubernetes:
+	Master
+	Worker 1
+	Worker 2
+	
+OS: Amazon EC2 Ubuntu 18.04 t3.micro
+
+1. Docker Installation:
+	* sudo apt-get update
+	* sudo apt-get install \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    gnupg \
+    lsb-release
+	* curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+	* echo \
+  "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
+  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  * sudo apt-get update
+  * sudo apt-get install docker-ce docker-ce-cli containerd.io
+
+2. Kubernetes Installation:
+	* curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+	* cat << EOF | sudo tee /etc/apt/sources.list.d/kubernetes.list 
+	* deb https://apt.kubernetes.io/ kubernetes-xenial main 
+	* EOF
+	* sudo apt-get update
+	* sudo apt-get install -y kubelet kubeadm kubectl
+
+3. On each server, enable the use of iptables 
+	* echo "net.bridge.bridge-nf-call-iptables=1" | sudo tee -a /etc/sysctl.conf
+	* sudo sysctl -p
+
+4. On the Master server only, initialize the cluster
+	* sudo kubeadm init --pod-network-cidr=10.244.0.0/16 --ignore-preflight-errors=all
+
+5. On the Master server only, set up the kubernetes configuration file for general usage
+	* mkdir -p $HOME/.kube
+	* sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+	* sudo chown $(id -u):$(id -g) $HOME/.kube/config
+	
+6. On the Master server only, apply a common networking plugin. In this case, Flannel
+	* kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+
+7. On the Worker servers only, join them to the cluster using the command you copied earlier.
+	* kubeadm join 172.31.5.63:6443 --token mzviai.eq7smckof3j88bfn \
+        --discovery-token-ca-cert-hash sha256:2e11843e6acbb7966b133215a620693f7fc44401648f9d2d0a2a24df681092ca
